@@ -21,6 +21,7 @@
   --muted: #888;
   --dim: #555;
   --accent: #c8ff00;
+  --accent2: #00e5ff;
   --radius: 14px;
   --radius-sm: 8px;
   --font: 'Syne', sans-serif;
@@ -31,10 +32,12 @@ html, body { height: 100%; overflow: hidden; }
 body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; }
 
 #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-#header { padding: 52px 20px 16px; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+#header { padding: 52px 20px 16px; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; display: flex; align-items: flex-end; justify-content: space-between; }
 #header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 #header h1 span { color: var(--accent); }
 .subtitle { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.api-btn { font-size: 11px; font-family: var(--mono); padding: 6px 12px; border-radius: 99px; border: 0.5px solid var(--border2); color: var(--muted); background: transparent; cursor: pointer; white-space: nowrap; }
+.api-btn.set { border-color: var(--accent); color: var(--accent); }
 
 #stats { display: flex; gap: 10px; padding: 14px 20px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
 #stats::-webkit-scrollbar { display: none; }
@@ -58,9 +61,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
 .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
 .card:active { transform: scale(0.97); }
-.card-thumb { width: 100%; aspect-ratio: 16/9; background: var(--surface2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.card-thumb { width: 100%; aspect-ratio: 16/9; background: var(--surface2); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
 .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .cat-icon { font-size: 22px; }
+.ue-badge { position: absolute; bottom: 5px; right: 5px; background: rgba(0,229,255,0.15); border: 0.5px solid rgba(0,229,255,0.3); border-radius: 99px; font-size: 9px; font-family: var(--mono); color: var(--accent2); padding: 2px 7px; }
 .card-body { padding: 10px; }
 .card-game { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
 .card-note { font-size: 12px; color: var(--text); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -89,7 +93,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .photo-area:active { border-color: var(--accent); }
 .photo-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
 .photo-hint { font-size: 12px; font-family: var(--mono); color: var(--muted); text-align: center; z-index: 1; pointer-events: none; }
-.photo-icon { font-size: 28px; z-index: 1; pointer-events: none; }
+.photo-icon-lbl { font-size: 28px; z-index: 1; pointer-events: none; }
 .photo-file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; font-size: 0; }
 .photo-remove { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.75); border: none; color: #f0f0f0; font-size: 12px; font-family: var(--mono); padding: 4px 10px; border-radius: 99px; cursor: pointer; z-index: 3; display: none; }
 
@@ -97,19 +101,38 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .tag-toggle { font-size: 12px; font-family: var(--mono); padding: 7px 14px; border-radius: 99px; border: 0.5px solid var(--border2); color: var(--muted); background: transparent; cursor: pointer; transition: all 0.15s; }
 .tag-toggle.on { border-color: transparent; font-weight: 500; }
 
+.ai-notice { background: rgba(0,229,255,0.06); border: 0.5px solid rgba(0,229,255,0.2); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; font-family: var(--mono); color: var(--accent2); margin-top: 12px; display: none; }
+.ai-notice.show { display: block; }
+
 .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
 .btn { flex: 1; padding: 14px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; }
 .btn-secondary { background: var(--surface2); color: var(--muted); }
 .btn-primary { background: var(--accent); color: #0a0a0a; }
 .btn:active { opacity: 0.8; transform: scale(0.98); }
 
+/* Detail sheet */
 #detail-img-wrap { width: 100%; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 16px; display: none; }
 #detail-img-wrap img { width: 100%; display: block; }
 #detail-game { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
 #detail-note { font-size: 16px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
 #detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-#detail-date { font-size: 11px; font-family: var(--mono); color: var(--dim); margin-bottom: 24px; }
+#detail-date { font-size: 11px; font-family: var(--mono); color: var(--dim); margin-bottom: 20px; }
+
+/* UE Analysis block */
+#ue-analysis { display: none; margin-bottom: 20px; }
+#ue-analysis .ue-label { font-size: 11px; font-family: var(--mono); color: var(--accent2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+#ue-analysis .ue-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; }
+#ue-content { background: var(--surface2); border: 0.5px solid rgba(0,229,255,0.15); border-radius: var(--radius-sm); padding: 14px; font-size: 13px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+.ue-loading { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.analyze-btn { width: 100%; padding: 12px; border-radius: var(--radius-sm); background: rgba(0,229,255,0.08); color: var(--accent2); font-family: var(--font); font-size: 14px; font-weight: 500; border: 0.5px solid rgba(0,229,255,0.25); cursor: pointer; margin-bottom: 12px; display: none; }
+.analyze-btn:active { opacity: 0.7; }
+
 #detail-del { width: 100%; padding: 14px; border-radius: var(--radius-sm); background: rgba(227,72,72,0.1); color: #f09595; font-family: var(--font); font-size: 14px; font-weight: 500; border: 0.5px solid rgba(227,72,72,0.2); cursor: pointer; }
+
+/* API key sheet */
+#apikey-sheet .sheet-title span { color: var(--accent2); }
+#apikey-info { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 16px; font-family: var(--mono); }
+#apikey-info a { color: var(--accent2); }
 
 .t-hit { background: rgba(55,138,221,0.15); color: #85B7EB; }
 .t-ability { background: rgba(127,119,221,0.15); color: #AFA9EC; }
@@ -123,8 +146,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 <body>
 <div id="app">
   <div id="header">
-    <h1>Ref<span>.</span>Tracker</h1>
-    <div class="subtitle">burak's game vfx library</div>
+    <div>
+      <h1>Ref<span>.</span>Tracker</h1>
+      <div class="subtitle">burak's game vfx library</div>
+    </div>
+    <button class="api-btn" id="api-btn" onclick="openApiSheet()">API key</button>
   </div>
   <div id="stats"></div>
   <div id="filters">
@@ -151,6 +177,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   </svg>
 </button>
 
+<!-- Add sheet -->
 <div class="sheet-overlay" id="add-overlay" onclick="if(event.target===this)closeAdd()">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -160,7 +187,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
       <div class="photo-area" id="photo-area">
         <img class="photo-preview" id="photo-preview" alt="">
         <input class="photo-file-input" type="file" accept="image/*" id="photo-input" onchange="handlePhoto(this)">
-        <div class="photo-icon" id="photo-icon">📷</div>
+        <div class="photo-icon-lbl" id="photo-icon">📷</div>
         <div class="photo-hint" id="photo-hint">tap to pick a screenshot</div>
         <button class="photo-remove" id="photo-remove" onclick="removePhoto(event)">remove</button>
       </div>
@@ -176,6 +203,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
     <div class="field">
       <label>Category</label>
       <div class="tag-grid" id="tag-grid"></div>
+      <div class="ai-notice" id="ai-notice">AI will analyze this screenshot and give you a UE breakdown when you open it.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeAdd()">Cancel</button>
@@ -184,6 +212,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   </div>
 </div>
 
+<!-- Detail sheet -->
 <div class="sheet-overlay" id="detail-overlay" onclick="if(event.target===this)closeDetail()">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -192,23 +221,58 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
     <div id="detail-note"></div>
     <div id="detail-tags"></div>
     <div id="detail-date"></div>
+    <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">Analyze in Unreal Engine</button>
+    <div id="ue-analysis">
+      <div class="ue-label"><span class="ue-dot"></span> UE breakdown — claude's analysis</div>
+      <div id="ue-content"></div>
+    </div>
     <button id="detail-del" onclick="delCurrent()">Remove reference</button>
+  </div>
+</div>
+
+<!-- API key sheet -->
+<div class="sheet-overlay" id="apikey-overlay" onclick="if(event.target===this)closeApiSheet()">
+  <div class="sheet" id="apikey-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Claude <span>API key</span></div>
+    <div id="apikey-info">
+      To enable UE analysis, paste your Anthropic API key below.<br><br>
+      Get one free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br><br>
+      Your key is stored only on this device, never sent anywhere except Anthropic's API.
+    </div>
+    <div class="field">
+      <label>API key</label>
+      <input id="f-apikey" type="password" placeholder="sk-ant-...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeApiSheet()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveApiKey()">Save key</button>
+    </div>
   </div>
 </div>
 
 <script>
 const CATS=[{k:'hit',l:'Hit VFX',cls:'t-hit'},{k:'ability',l:'Ability VFX',cls:'t-ability'},{k:'env',l:'Env VFX',cls:'t-env'},{k:'ui',l:'UI feedback',cls:'t-ui'},{k:'destruction',l:'Destruction',cls:'t-destruction'},{k:'calling',l:'Calling card',cls:'t-calling'},{k:'other',l:'Other',cls:'t-other'}];
+const VFX_TAGS=['hit','ability','env','destruction','calling'];
 const ICONS={hit:'⚡',ability:'✦',env:'◈',ui:'◻',destruction:'◆',calling:'★',other:'○'};
-const SEED=[{id:1,game:'Brawl Stars',note:'Ability activation uses a quick white flash + radial burst — reads instantly even at small screen size.',tags:['ability','ui'],img:'',date:'2026-04-08'},{id:2,game:'World of Tanks Blitz',note:'Hit marker on penetration is a distinct orange spark cluster vs grey for bounce — great category feedback.',tags:['hit','ui'],img:'',date:'2026-04-09'},{id:3,game:'Fortnite Mobile',note:'Storm wall uses scrolling UV distortion on a thin emissive mesh — achievable in UE with panning material.',tags:['env'],img:'',date:'2026-04-10'}];
+const SEED=[{id:1,game:'Brawl Stars',note:'Ability activation uses a quick white flash + radial burst — reads instantly even at small screen size.',tags:['ability','ui'],img:'',date:'2026-04-08',ueAnalysis:''},{id:2,game:'World of Tanks Blitz',note:'Hit marker on penetration is a distinct orange spark cluster vs grey for bounce — great category feedback.',tags:['hit','ui'],img:'',date:'2026-04-09',ueAnalysis:''},{id:3,game:'Fortnite Mobile',note:'Storm wall uses scrolling UV distortion on a thin emissive mesh — achievable in UE with panning material.',tags:['env'],img:'',date:'2026-04-10',ueAnalysis:''}];
 
 let refs=[],selTags=[],activeCat='',currentId=null,pendingImg='';
 
-function load(){try{const s=localStorage.getItem('reftracker_v2');refs=s?JSON.parse(s):SEED;}catch(e){refs=SEED;}}
-function save(){try{localStorage.setItem('reftracker_v2',JSON.stringify(refs));}catch(e){}}
+function load(){try{const s=localStorage.getItem('reftracker_v3');refs=s?JSON.parse(s):SEED;}catch(e){refs=SEED;}}
+function save(){try{localStorage.setItem('reftracker_v3',JSON.stringify(refs));}catch(e){}}
+function getKey(){return localStorage.getItem('rt_apikey')||'';}
 function catInfo(k){return CATS.find(c=>c.k===k)||{k:'other',l:'Other',cls:'t-other'};}
+function isVfxTagged(tags){return tags.some(t=>VFX_TAGS.includes(t));}
+
+function updateApiBtn(){
+  const btn=document.getElementById('api-btn');
+  btn.classList.toggle('set',!!getKey());
+  btn.textContent=getKey()?'API key ✓':'API key';
+}
 
 function handlePhoto(input){
-  const file=input.files[0]; if(!file) return;
+  const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     pendingImg=e.target.result;
@@ -217,12 +281,13 @@ function handlePhoto(input){
     document.getElementById('photo-icon').style.display='none';
     document.getElementById('photo-hint').style.display='none';
     document.getElementById('photo-remove').style.display='block';
+    updateAiNotice();
   };
   reader.readAsDataURL(file);
 }
 
 function removePhoto(e){
-  if(e) e.stopPropagation();
+  if(e)e.stopPropagation();
   pendingImg='';
   document.getElementById('photo-preview').style.display='none';
   document.getElementById('photo-preview').src='';
@@ -230,27 +295,36 @@ function removePhoto(e){
   document.getElementById('photo-hint').style.display='';
   document.getElementById('photo-remove').style.display='none';
   document.getElementById('photo-input').value='';
+  updateAiNotice();
+}
+
+function updateAiNotice(){
+  const hasVfx=selTags.some(t=>VFX_TAGS.includes(t));
+  const hasImg=!!pendingImg;
+  const notice=document.getElementById('ai-notice');
+  notice.classList.toggle('show',hasVfx&&hasImg&&!!getKey());
 }
 
 function render(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=refs.filter(r=>{
-    if(activeCat&&!r.tags.includes(activeCat)) return false;
-    if(q&&!r.note.toLowerCase().includes(q)&&!r.game.toLowerCase().includes(q)) return false;
+    if(activeCat&&!r.tags.includes(activeCat))return false;
+    if(q&&!r.note.toLowerCase().includes(q)&&!r.game.toLowerCase().includes(q))return false;
     return true;
   });
   const games=new Set(refs.map(r=>r.game)).size;
   const envCount=refs.filter(r=>r.tags.includes('env')).length;
+  const analysed=refs.filter(r=>r.ueAnalysis).length;
   const catCounts={};
   refs.forEach(r=>r.tags.forEach(t=>{catCounts[t]=(catCounts[t]||0)+1;}));
   const top=Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
   const topLabel=top?catInfo(top[0]).l:'—';
-  document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${refs.length}</div><div class="stat-l">refs</div></div><div class="stat"><div class="stat-n">${games}</div><div class="stat-l">games</div></div><div class="stat"><div class="stat-n">${envCount}</div><div class="stat-l">env vfx</div></div><div class="stat"><div class="stat-n" style="font-size:13px;margin-top:5px;">${topLabel}</div><div class="stat-l">top cat</div></div>`;
+  document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${refs.length}</div><div class="stat-l">refs</div></div><div class="stat"><div class="stat-n">${games}</div><div class="stat-l">games</div></div><div class="stat"><div class="stat-n">${envCount}</div><div class="stat-l">env vfx</div></div><div class="stat"><div class="stat-n">${analysed}</div><div class="stat-l">ue analysed</div></div>`;
   const g=document.getElementById('grid');
   if(!list.length){g.innerHTML=`<div class="empty">${refs.length?'no matches':'add your first reference'}</div>`;return;}
   g.innerHTML=list.map(r=>{
     const ci=catInfo(r.tags[0]||'other');
-    const thumb=r.img?`<div class="card-thumb"><img src="${r.img}" alt="" loading="lazy"></div>`:`<div class="card-thumb"><div class="cat-icon">${ICONS[ci.k]||'○'}</div></div>`;
+    const thumb=r.img?`<div class="card-thumb"><img src="${r.img}" alt="" loading="lazy">${r.ueAnalysis?'<div class="ue-badge">UE ✓</div>':''}</div>`:`<div class="card-thumb"><div class="cat-icon">${ICONS[ci.k]||'○'}</div></div>`;
     return `<div class="card" onclick="openDetail(${r.id})">${thumb}<div class="card-body"><div class="card-game">${r.game}</div><div class="card-note">${r.note}</div><span class="card-tag ${ci.cls}">${ci.l}</span><div class="card-date">${r.date}</div></div></div>`;
   }).join('');
 }
@@ -258,7 +332,7 @@ function render(){
 document.querySelectorAll('.filter-pill').forEach(p=>{
   p.addEventListener('click',()=>{
     document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('active'));
-    p.classList.add('active'); activeCat=p.dataset.cat; render();
+    p.classList.add('active');activeCat=p.dataset.cat;render();
   });
 });
 
@@ -266,24 +340,29 @@ function openAdd(){
   selTags=[];pendingImg='';
   ['f-game','f-note'].forEach(id=>document.getElementById(id).value='');
   removePhoto();
+  document.getElementById('ai-notice').classList.remove('show');
   document.getElementById('tag-grid').innerHTML=CATS.map(c=>`<div class="tag-toggle ${c.cls}" data-k="${c.k}" onclick="toggleTag(this,'${c.k}')">${c.l}</div>`).join('');
   document.getElementById('add-overlay').classList.add('open');
 }
 function closeAdd(){document.getElementById('add-overlay').classList.remove('open');}
+
 function toggleTag(el,k){
   if(selTags.includes(k)){selTags=selTags.filter(t=>t!==k);el.classList.remove('on');}
   else{selTags.push(k);el.classList.add('on');}
+  updateAiNotice();
 }
+
 function saveRef(){
   const game=document.getElementById('f-game').value.trim();
   const note=document.getElementById('f-note').value.trim();
-  if(!game||!note) return;
-  refs.unshift({id:Date.now(),game,note,tags:selTags.length?[...selTags]:['other'],img:pendingImg,date:new Date().toISOString().slice(0,10)});
+  if(!game||!note)return;
+  refs.unshift({id:Date.now(),game,note,tags:selTags.length?[...selTags]:['other'],img:pendingImg,date:new Date().toISOString().slice(0,10),ueAnalysis:''});
   save();closeAdd();render();
 }
+
 function openDetail(id){
   currentId=id;
-  const r=refs.find(x=>x.id===id);if(!r) return;
+  const r=refs.find(x=>x.id===id);if(!r)return;
   document.getElementById('detail-game').textContent=r.game.toUpperCase();
   document.getElementById('detail-note').textContent=r.note;
   document.getElementById('detail-date').textContent=r.date;
@@ -291,16 +370,109 @@ function openDetail(id){
   const wrap=document.getElementById('detail-img-wrap');
   if(r.img){document.getElementById('detail-img').src=r.img;wrap.style.display='block';}
   else{wrap.style.display='none';}
+
+  const canAnalyze=r.img&&isVfxTagged(r.tags)&&!!getKey();
+  const analyzeBtn=document.getElementById('analyze-btn');
+  const ueBlock=document.getElementById('ue-analysis');
+  const ueContent=document.getElementById('ue-content');
+
+  if(r.ueAnalysis){
+    ueBlock.style.display='block';
+    ueContent.textContent=r.ueAnalysis;
+    analyzeBtn.style.display=canAnalyze?'block':'none';
+    analyzeBtn.textContent='Re-analyze in Unreal Engine';
+  } else if(canAnalyze){
+    ueBlock.style.display='none';
+    analyzeBtn.style.display='block';
+    analyzeBtn.textContent='Analyze in Unreal Engine';
+  } else {
+    ueBlock.style.display='none';
+    analyzeBtn.style.display='none';
+  }
+
   document.getElementById('detail-overlay').classList.add('open');
 }
+
+async function runAnalysis(){
+  const r=refs.find(x=>x.id===currentId);if(!r||!r.img)return;
+  const btn=document.getElementById('analyze-btn');
+  const ueBlock=document.getElementById('ue-analysis');
+  const ueContent=document.getElementById('ue-content');
+
+  btn.disabled=true;
+  btn.textContent='Analyzing...';
+  ueBlock.style.display='block';
+  ueContent.innerHTML='<span class="ue-loading">Claude is reading the screenshot...</span>';
+
+  const base64=r.img.split(',')[1];
+  const mimeMatch=r.img.match(/data:(image\/\w+);/);
+  const mime=mimeMatch?mimeMatch[1]:'image/jpeg';
+
+  const prompt=`You are a senior Unreal Engine VFX artist helping a junior artist learn. Analyze this game screenshot and give a practical breakdown for recreating the visual effects shown.
+
+Game: ${r.game}
+Category: ${r.tags.join(', ')}
+Note from artist: ${r.note}
+
+Your response must be structured exactly like this:
+
+WHAT I SEE
+[2-3 sentences describing the specific VFX elements visible: particles, materials, lighting, post-process]
+
+HOW TO BUILD IT IN UE
+[Step by step, 4-6 concrete steps. Be specific: mention Niagara, Material Editor, Blueprints, Post Process Volume as relevant. Use plain language a junior can follow.]
+
+KEY NODES / SETTINGS
+[List 3-5 specific UE nodes, parameters or settings they should look for. e.g. "Emissive Color in Material — drive it with a Particle Color node"]
+
+MOBILE CONSIDERATIONS
+[1-2 sentences on what to simplify or watch out for when targeting mobile performance in UE]`;
+
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':getKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',
+        max_tokens:1000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mime,data:base64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    if(data.error){ueContent.textContent='Error: '+data.error.message;btn.disabled=false;btn.textContent='Retry analysis';return;}
+    const text=data.content.map(b=>b.text||'').join('');
+    r.ueAnalysis=text;
+    save();
+    ueContent.textContent=text;
+    btn.textContent='Re-analyze in Unreal Engine';
+    btn.disabled=false;
+    render();
+  } catch(e){
+    ueContent.textContent='Something went wrong. Check your API key and connection.';
+    btn.disabled=false;btn.textContent='Retry analysis';
+  }
+}
+
 function closeDetail(){document.getElementById('detail-overlay').classList.remove('open');currentId=null;}
 function delCurrent(){
-  if(!currentId) return;
+  if(!currentId)return;
   refs=refs.filter(r=>r.id!==currentId);
   save();closeDetail();render();
 }
 
-load();render();
+function openApiSheet(){document.getElementById('f-apikey').value=getKey();document.getElementById('apikey-overlay').classList.add('open');}
+function closeApiSheet(){document.getElementById('apikey-overlay').classList.remove('open');}
+function saveApiKey(){
+  const k=document.getElementById('f-apikey').value.trim();
+  if(k)localStorage.setItem('rt_apikey',k);
+  else localStorage.removeItem('rt_apikey');
+  closeApiSheet();updateApiBtn();
+}
+
+load();render();updateApiBtn();
 </script>
 </body>
 </html>
