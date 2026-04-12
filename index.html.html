@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RefTracker">
+<meta name="theme-color" content="#0a0a0a">
+<title>Ref Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface2: #1c1c1c;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0f0f0;
+  --muted: #888;
+  --dim: #555;
+  --accent: #c8ff00;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; }
+
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+#header { padding: 52px 20px 16px; background: var(--bg); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+#header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+#header h1 span { color: var(--accent); }
+.subtitle { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+#stats { display: flex; gap: 10px; padding: 14px 20px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+#stats::-webkit-scrollbar { display: none; }
+.stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; flex-shrink: 0; }
+.stat-n { font-size: 22px; font-weight: 700; color: var(--accent); font-family: var(--mono); line-height: 1; }
+.stat-l { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+#filters { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 0.5px solid var(--border); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+#filters::-webkit-scrollbar { display: none; }
+.filter-pill { font-size: 12px; font-family: var(--mono); padding: 6px 14px; border-radius: 99px; border: 0.5px solid var(--border2); color: var(--muted); background: transparent; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.filter-pill.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 500; }
+
+#search-wrap { padding: 12px 20px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+#search { width: 100%; background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; }
+#search::placeholder { color: var(--dim); }
+#search:focus { border-color: rgba(200,255,0,0.3); }
+
+#grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 20px 100px; }
+#grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (min-width: 600px) { #grid { grid-template-columns: repeat(3, 1fr); } }
+
+.card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
+.card:active { transform: scale(0.97); }
+.card-thumb { width: 100%; aspect-ratio: 16/9; background: var(--surface2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cat-icon { font-size: 22px; }
+.card-body { padding: 10px; }
+.card-game { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.card-note { font-size: 12px; color: var(--text); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card-tag { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 99px; margin-top: 7px; }
+.card-date { font-size: 10px; color: var(--dim); font-family: var(--mono); margin-top: 5px; }
+
+#fab { position: fixed; bottom: 28px; right: 20px; width: 56px; height: 56px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border: none; transition: transform 0.15s; }
+#fab:active { transform: scale(0.92); }
+
+.empty { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+
+.sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: flex-end; }
+.sheet-overlay.open { display: flex; }
+.sheet { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; border-top: 0.5px solid var(--border2); width: 100%; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 20px 48px; }
+.sheet-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 99px; margin: 0 auto 20px; }
+.sheet-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.02em; }
+.sheet-title span { color: var(--accent); }
+
+.field { margin-bottom: 16px; }
+.field label { font-size: 11px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 8px; }
+.field input, .field textarea { width: 100%; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text); font-family: var(--font); font-size: 15px; outline: none; -webkit-appearance: none; }
+.field input:focus, .field textarea:focus { border-color: rgba(200,255,0,0.4); }
+.field textarea { height: 90px; resize: none; line-height: 1.5; }
+
+.photo-area { width: 100%; aspect-ratio: 16/9; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.15s; }
+.photo-area:active { border-color: var(--accent); }
+.photo-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+.photo-hint { font-size: 12px; font-family: var(--mono); color: var(--muted); text-align: center; z-index: 1; pointer-events: none; }
+.photo-icon { font-size: 28px; z-index: 1; pointer-events: none; }
+.photo-file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; font-size: 0; }
+.photo-remove { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.75); border: none; color: #f0f0f0; font-size: 12px; font-family: var(--mono); padding: 4px 10px; border-radius: 99px; cursor: pointer; z-index: 3; display: none; }
+
+.tag-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-toggle { font-size: 12px; font-family: var(--mono); padding: 7px 14px; border-radius: 99px; border: 0.5px solid var(--border2); color: var(--muted); background: transparent; cursor: pointer; transition: all 0.15s; }
+.tag-toggle.on { border-color: transparent; font-weight: 500; }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+.btn { flex: 1; padding: 14px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; }
+.btn-secondary { background: var(--surface2); color: var(--muted); }
+.btn-primary { background: var(--accent); color: #0a0a0a; }
+.btn:active { opacity: 0.8; transform: scale(0.98); }
+
+#detail-img-wrap { width: 100%; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 16px; display: none; }
+#detail-img-wrap img { width: 100%; display: block; }
+#detail-game { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+#detail-note { font-size: 16px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
+#detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+#detail-date { font-size: 11px; font-family: var(--mono); color: var(--dim); margin-bottom: 24px; }
+#detail-del { width: 100%; padding: 14px; border-radius: var(--radius-sm); background: rgba(227,72,72,0.1); color: #f09595; font-family: var(--font); font-size: 14px; font-weight: 500; border: 0.5px solid rgba(227,72,72,0.2); cursor: pointer; }
+
+.t-hit { background: rgba(55,138,221,0.15); color: #85B7EB; }
+.t-ability { background: rgba(127,119,221,0.15); color: #AFA9EC; }
+.t-env { background: rgba(29,158,117,0.15); color: #5DCAA5; }
+.t-ui { background: rgba(186,117,23,0.15); color: #EF9F27; }
+.t-destruction { background: rgba(216,90,48,0.15); color: #F0997B; }
+.t-calling { background: rgba(212,83,126,0.15); color: #ED93B1; }
+.t-other { background: rgba(136,135,128,0.15); color: #B4B2A9; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>Ref<span>.</span>Tracker</h1>
+    <div class="subtitle">burak's game vfx library</div>
+  </div>
+  <div id="stats"></div>
+  <div id="filters">
+    <div class="filter-pill active" data-cat="">All</div>
+    <div class="filter-pill" data-cat="hit">Hit VFX</div>
+    <div class="filter-pill" data-cat="ability">Ability VFX</div>
+    <div class="filter-pill" data-cat="env">Env VFX</div>
+    <div class="filter-pill" data-cat="ui">UI feedback</div>
+    <div class="filter-pill" data-cat="destruction">Destruction</div>
+    <div class="filter-pill" data-cat="calling">Calling card</div>
+    <div class="filter-pill" data-cat="other">Other</div>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="search games, notes..." oninput="render()">
+  </div>
+  <div id="grid-wrap">
+    <div id="grid"></div>
+  </div>
+</div>
+
+<button id="fab" onclick="openAdd()">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
+
+<div class="sheet-overlay" id="add-overlay" onclick="if(event.target===this)closeAdd()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">New <span>reference</span></div>
+    <div class="field">
+      <label>Screenshot from camera roll</label>
+      <div class="photo-area" id="photo-area">
+        <img class="photo-preview" id="photo-preview" alt="">
+        <input class="photo-file-input" type="file" accept="image/*" id="photo-input" onchange="handlePhoto(this)">
+        <div class="photo-icon" id="photo-icon">📷</div>
+        <div class="photo-hint" id="photo-hint">tap to pick a screenshot</div>
+        <button class="photo-remove" id="photo-remove" onclick="removePhoto(event)">remove</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Game name</label>
+      <input id="f-game" type="text" placeholder="e.g. Brawl Stars">
+    </div>
+    <div class="field">
+      <label>What did you notice?</label>
+      <textarea id="f-note" placeholder="Describe the effect, feedback, or visual moment..."></textarea>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <div class="tag-grid" id="tag-grid"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAdd()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRef()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="detail-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="detail-img-wrap"><img id="detail-img" alt=""></div>
+    <div id="detail-game"></div>
+    <div id="detail-note"></div>
+    <div id="detail-tags"></div>
+    <div id="detail-date"></div>
+    <button id="detail-del" onclick="delCurrent()">Remove reference</button>
+  </div>
+</div>
+
+<script>
+const CATS=[{k:'hit',l:'Hit VFX',cls:'t-hit'},{k:'ability',l:'Ability VFX',cls:'t-ability'},{k:'env',l:'Env VFX',cls:'t-env'},{k:'ui',l:'UI feedback',cls:'t-ui'},{k:'destruction',l:'Destruction',cls:'t-destruction'},{k:'calling',l:'Calling card',cls:'t-calling'},{k:'other',l:'Other',cls:'t-other'}];
+const ICONS={hit:'⚡',ability:'✦',env:'◈',ui:'◻',destruction:'◆',calling:'★',other:'○'};
+const SEED=[{id:1,game:'Brawl Stars',note:'Ability activation uses a quick white flash + radial burst — reads instantly even at small screen size.',tags:['ability','ui'],img:'',date:'2026-04-08'},{id:2,game:'World of Tanks Blitz',note:'Hit marker on penetration is a distinct orange spark cluster vs grey for bounce — great category feedback.',tags:['hit','ui'],img:'',date:'2026-04-09'},{id:3,game:'Fortnite Mobile',note:'Storm wall uses scrolling UV distortion on a thin emissive mesh — achievable in UE with panning material.',tags:['env'],img:'',date:'2026-04-10'}];
+
+let refs=[],selTags=[],activeCat='',currentId=null,pendingImg='';
+
+function load(){try{const s=localStorage.getItem('reftracker_v2');refs=s?JSON.parse(s):SEED;}catch(e){refs=SEED;}}
+function save(){try{localStorage.setItem('reftracker_v2',JSON.stringify(refs));}catch(e){}}
+function catInfo(k){return CATS.find(c=>c.k===k)||{k:'other',l:'Other',cls:'t-other'};}
+
+function handlePhoto(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    pendingImg=e.target.result;
+    document.getElementById('photo-preview').src=pendingImg;
+    document.getElementById('photo-preview').style.display='block';
+    document.getElementById('photo-icon').style.display='none';
+    document.getElementById('photo-hint').style.display='none';
+    document.getElementById('photo-remove').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(e){
+  if(e) e.stopPropagation();
+  pendingImg='';
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('photo-preview').src='';
+  document.getElementById('photo-icon').style.display='';
+  document.getElementById('photo-hint').style.display='';
+  document.getElementById('photo-remove').style.display='none';
+  document.getElementById('photo-input').value='';
+}
+
+function render(){
+  const q=document.getElementById('search').value.toLowerCase();
+  let list=refs.filter(r=>{
+    if(activeCat&&!r.tags.includes(activeCat)) return false;
+    if(q&&!r.note.toLowerCase().includes(q)&&!r.game.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const games=new Set(refs.map(r=>r.game)).size;
+  const envCount=refs.filter(r=>r.tags.includes('env')).length;
+  const catCounts={};
+  refs.forEach(r=>r.tags.forEach(t=>{catCounts[t]=(catCounts[t]||0)+1;}));
+  const top=Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
+  const topLabel=top?catInfo(top[0]).l:'—';
+  document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${refs.length}</div><div class="stat-l">refs</div></div><div class="stat"><div class="stat-n">${games}</div><div class="stat-l">games</div></div><div class="stat"><div class="stat-n">${envCount}</div><div class="stat-l">env vfx</div></div><div class="stat"><div class="stat-n" style="font-size:13px;margin-top:5px;">${topLabel}</div><div class="stat-l">top cat</div></div>`;
+  const g=document.getElementById('grid');
+  if(!list.length){g.innerHTML=`<div class="empty">${refs.length?'no matches':'add your first reference'}</div>`;return;}
+  g.innerHTML=list.map(r=>{
+    const ci=catInfo(r.tags[0]||'other');
+    const thumb=r.img?`<div class="card-thumb"><img src="${r.img}" alt="" loading="lazy"></div>`:`<div class="card-thumb"><div class="cat-icon">${ICONS[ci.k]||'○'}</div></div>`;
+    return `<div class="card" onclick="openDetail(${r.id})">${thumb}<div class="card-body"><div class="card-game">${r.game}</div><div class="card-note">${r.note}</div><span class="card-tag ${ci.cls}">${ci.l}</span><div class="card-date">${r.date}</div></div></div>`;
+  }).join('');
+}
+
+document.querySelectorAll('.filter-pill').forEach(p=>{
+  p.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active'); activeCat=p.dataset.cat; render();
+  });
+});
+
+function openAdd(){
+  selTags=[];pendingImg='';
+  ['f-game','f-note'].forEach(id=>document.getElementById(id).value='');
+  removePhoto();
+  document.getElementById('tag-grid').innerHTML=CATS.map(c=>`<div class="tag-toggle ${c.cls}" data-k="${c.k}" onclick="toggleTag(this,'${c.k}')">${c.l}</div>`).join('');
+  document.getElementById('add-overlay').classList.add('open');
+}
+function closeAdd(){document.getElementById('add-overlay').classList.remove('open');}
+function toggleTag(el,k){
+  if(selTags.includes(k)){selTags=selTags.filter(t=>t!==k);el.classList.remove('on');}
+  else{selTags.push(k);el.classList.add('on');}
+}
+function saveRef(){
+  const game=document.getElementById('f-game').value.trim();
+  const note=document.getElementById('f-note').value.trim();
+  if(!game||!note) return;
+  refs.unshift({id:Date.now(),game,note,tags:selTags.length?[...selTags]:['other'],img:pendingImg,date:new Date().toISOString().slice(0,10)});
+  save();closeAdd();render();
+}
+function openDetail(id){
+  currentId=id;
+  const r=refs.find(x=>x.id===id);if(!r) return;
+  document.getElementById('detail-game').textContent=r.game.toUpperCase();
+  document.getElementById('detail-note').textContent=r.note;
+  document.getElementById('detail-date').textContent=r.date;
+  document.getElementById('detail-tags').innerHTML=r.tags.map(t=>{const c=catInfo(t);return`<span class="card-tag ${c.cls}">${c.l}</span>`;}).join('');
+  const wrap=document.getElementById('detail-img-wrap');
+  if(r.img){document.getElementById('detail-img').src=r.img;wrap.style.display='block';}
+  else{wrap.style.display='none';}
+  document.getElementById('detail-overlay').classList.add('open');
+}
+function closeDetail(){document.getElementById('detail-overlay').classList.remove('open');currentId=null;}
+function delCurrent(){
+  if(!currentId) return;
+  refs=refs.filter(r=>r.id!==currentId);
+  save();closeDetail();render();
+}
+
+load();render();
+</script>
+</body>
+</html>
