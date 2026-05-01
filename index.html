@@ -10,16 +10,21 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #080808; font-family: 'JetBrains Mono', 'Courier New', monospace; }
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #0e0e0e; }
   ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+  .card { transition: border-color 0.15s, transform 0.15s; }
   .card:hover { border-color: #2a2a2a !important; transform: translateY(-1px); }
   .tag { background: #111; border: 1px solid #1e1e1e; color: #555; border-radius: 4px; padding: 2px 7px; font-size: 10px; letter-spacing: 1px; }
   .cat-btn { background: none; border: 1px solid #1a1a1a; color: #444; border-radius: 5px; padding: 5px 12px; font-size: 10px; letter-spacing: 1px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.15s; }
   .cat-btn:hover, .cat-btn.active { background: #111; border-color: #333; color: #ccc; }
   .ref-row:hover { background: #0d0d0d !important; }
   input:focus, select:focus, textarea:focus { border-color: #333 !important; outline: none; }
+  .action-btn { width: 100%; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; color: #ccc; padding: 14px 18px; font-size: 12px; font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; cursor: pointer; text-align: left; transition: background 0.1s; }
+  .action-btn:hover { background: #181818; }
+  .action-btn.danger { color: #ff4444; }
+  .img-upload-box { border: 1px dashed #2a2a2a; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.15s; }
+  .img-upload-box:hover { border-color: #444; }
 </style>
 </head>
 <body>
@@ -30,9 +35,9 @@ const { useState, useEffect, useRef, useCallback } = React;
 const CATEGORIES = ["All","Fire","Smoke","Explosion","Water","Lightning","Magic","Dust","Impact","Ambient","UI","Other"];
 
 const INITIAL_REFS = [
-  { id: 1, title: "Ember Burst Loop", category: "Fire", tags: ["loop","stylized","orange"], status: "approved", rating: 5, notes: "Great energy for boss hit reactions", url: "", date: "2026-03-10", thumbnail: "🔥" },
-  { id: 2, title: "Smoke Trail - Slow", category: "Smoke", tags: ["slow-mo","realistic"], status: "review", rating: 3, notes: "Might need color grading for night scenes", url: "", date: "2026-03-22", thumbnail: "💨" },
-  { id: 3, title: "Shockwave Ring", category: "Explosion", tags: ["shockwave","ground","impact"], status: "approved", rating: 4, notes: "Perfect for ground slam moves", url: "", date: "2026-04-01", thumbnail: "💥" },
+  { id: 1, title: "Ember Burst Loop", category: "Fire", tags: ["loop","stylized","orange"], status: "approved", rating: 5, notes: "Great energy for boss hit reactions", url: "", date: "2026-03-10", thumbnail: "🔥", image: null },
+  { id: 2, title: "Smoke Trail - Slow", category: "Smoke", tags: ["slow-mo","realistic"], status: "review", rating: 3, notes: "Might need color grading for night scenes", url: "", date: "2026-03-22", thumbnail: "💨", image: null },
+  { id: 3, title: "Shockwave Ring", category: "Explosion", tags: ["shockwave","ground","impact"], status: "approved", rating: 4, notes: "Perfect for ground slam moves", url: "", date: "2026-04-01", thumbnail: "💥", image: null },
 ];
 
 const STATUS_COLORS = {
@@ -42,25 +47,62 @@ const STATUS_COLORS = {
   idea:     { bg: "#0d1a2b", border: "#44aaff", text: "#44aaff" },
 };
 
-const STORAGE_KEY = "vfx_refs_v2";
+const STORAGE_KEY = "vfx_refs_v3";
 
 function loadRefs() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
 }
 function saveRefs(refs) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(refs)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(refs)); } catch(e) { console.warn("Storage full?", e); }
+}
+
+function resizeImage(dataUrl, maxW = 800) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.src = dataUrl;
+  });
+}
+
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) { reject("Not an image"); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const resized = await resizeImage(e.target.result);
+      resolve(resized);
+    };
+    reader.onerror = () => reject("Read failed");
+    reader.readAsDataURL(file);
+  });
 }
 
 function useLongPress(onLongPress, onClick, delay = 500) {
   const timerRef = useRef(null);
   const firedRef = useRef(false);
+  const movedRef = useRef(false);
   const start = useCallback((e) => {
+    movedRef.current = false;
     firedRef.current = false;
-    timerRef.current = setTimeout(() => { firedRef.current = true; onLongPress(e); }, delay);
+    timerRef.current = setTimeout(() => {
+      if (!movedRef.current) { firedRef.current = true; onLongPress(e); }
+    }, delay);
   }, [onLongPress, delay]);
+  const move = useCallback(() => { movedRef.current = true; clearTimeout(timerRef.current); }, []);
   const cancel = useCallback(() => { clearTimeout(timerRef.current); }, []);
-  const end = useCallback((e) => { clearTimeout(timerRef.current); if (!firedRef.current) onClick(e); }, [onClick]);
-  return { onPointerDown: start, onPointerUp: end, onPointerLeave: cancel, onPointerCancel: cancel };
+  const end = useCallback((e) => {
+    clearTimeout(timerRef.current);
+    if (!firedRef.current && !movedRef.current) onClick(e);
+  }, [onClick]);
+  return { onPointerDown: start, onPointerMove: move, onPointerUp: end, onPointerLeave: cancel, onPointerCancel: cancel };
 }
 
 const Stars = ({ rating, setRating }) =>
@@ -74,32 +116,96 @@ const inputStyle = { width: "100%", background: "#141414", border: "1px solid #2
 const btnPrimary = { background: "#1aff7a", color: "#000", border: "none", borderRadius: "6px", padding: "9px 20px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", fontWeight: "700", letterSpacing: "2px", cursor: "pointer" };
 const btnSecondary = { background: "transparent", color: "#555", border: "1px solid #222", borderRadius: "6px", padding: "9px 20px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "2px", cursor: "pointer" };
 
+function ActionSheet({ item, onEdit, onDelete, onClose }) {
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "16px" }}>
+      <div style={{ background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: "14px", padding: "16px", width: "100%", maxWidth: "400px", fontFamily: "'JetBrains Mono', monospace" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 4px 16px", borderBottom: "1px solid #161616", marginBottom: "12px" }}>
+          {item.image
+            ? <img src={item.image} alt="" style={{ width: 40, height: 40, borderRadius: "6px", objectFit: "cover" }} />
+            : <span style={{ fontSize: "28px" }}>{item.thumbnail}</span>
+          }
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#ddd" }}>{item.title}</div>
+            <div style={{ fontSize: "10px", color: "#444" }}>{item.category}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <button className="action-btn" onClick={onEdit}>✏️&nbsp;&nbsp;EDIT REFERENCE</button>
+          <button className="action-btn danger" onClick={onDelete}>🗑️&nbsp;&nbsp;DELETE REFERENCE</button>
+          <button className="action-btn" onClick={onClose} style={{ color: "#444", marginTop: "4px" }}>CANCEL</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Modal({ item, onClose, onSave }) {
   const initTags = Array.isArray(item?.tags) ? item.tags.join(", ") : (item?.tags || "");
   const [form, setForm] = useState(item
     ? { ...item, tags: initTags }
-    : { title: "", category: "Fire", tags: "", status: "idea", rating: 3, notes: "", url: "", thumbnail: "✨" }
+    : { title: "", category: "Fire", tags: "", status: "idea", rating: 3, notes: "", url: "", thumbnail: "✨", image: null }
   );
+  const [imgLoading, setImgLoading] = useState(false);
+  const fileInputRef = useRef(null);
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const EMOJIS = ["🔥","💨","💥","💧","⚡","✨","🌫️","🌪️","🎇","🎆","⭐","🌟"];
+
+  const handleImagePick = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImgLoading(true);
+    try {
+      const data = await readImageFile(file);
+      update("image", data);
+    } catch(err) {
+      alert("Could not load image: " + err);
+    } finally {
+      setImgLoading(false);
+      e.target.value = "";
+    }
+  };
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-      <div style={{ background: "#0e0e0e", border: "1px solid #222", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto", color: "#eee", fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ background: "#0e0e0e", border: "1px solid #222", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "480px", maxHeight: "92vh", overflowY: "auto", color: "#eee", fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <span style={{ color: "#888", fontSize: "11px", letterSpacing: "3px" }}>{item?.id ? "EDIT REFERENCE" : "NEW REFERENCE"}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", fontSize: "20px", cursor: "pointer" }}>✕</button>
         </div>
         <div style={{ marginBottom: "16px" }}>
-          <label style={labelStyle}>THUMBNAIL ICON</label>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "6px" }}>
-            {EMOJIS.map(e => (
-              <span key={e} onClick={() => update("thumbnail", e)}
-                style={{ fontSize: "22px", cursor: "pointer", padding: "4px 8px", borderRadius: "6px", background: form.thumbnail === e ? "#1a1a1a" : "transparent", border: form.thumbnail === e ? "1px solid #444" : "1px solid transparent" }}>{e}</span>
-            ))}
-          </div>
+          <label style={labelStyle}>REFERENCE IMAGE (stored locally on your device)</label>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImagePick} />
+          {form.image ? (
+            <div style={{ position: "relative", marginTop: "6px" }}>
+              <img src={form.image} alt="reference" style={{ width: "100%", maxHeight: "180px", objectFit: "cover", borderRadius: "8px", border: "1px solid #222" }} />
+              <button onClick={() => update("image", null)}
+                style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,0,0,0.7)", border: "1px solid #333", color: "#ff4444", borderRadius: "6px", padding: "4px 10px", fontSize: "10px", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace" }}>
+                REMOVE
+              </button>
+            </div>
+          ) : (
+            <div className="img-upload-box" onClick={() => fileInputRef.current.click()} style={{ marginTop: "6px" }}>
+              {imgLoading
+                ? <span style={{ fontSize: "11px", color: "#444", letterSpacing: "1px" }}>LOADING...</span>
+                : <span style={{ fontSize: "11px", color: "#333", letterSpacing: "1px" }}>📁 TAP TO PICK FROM GALLERY</span>
+              }
+            </div>
+          )}
         </div>
+        {!form.image && (
+          <div style={{ marginBottom: "16px" }}>
+            <label style={labelStyle}>OR PICK AN ICON</label>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "6px" }}>
+              {EMOJIS.map(e => (
+                <span key={e} onClick={() => update("thumbnail", e)}
+                  style={{ fontSize: "22px", cursor: "pointer", padding: "4px 8px", borderRadius: "6px", background: form.thumbnail === e ? "#1a1a1a" : "transparent", border: form.thumbnail === e ? "1px solid #444" : "1px solid transparent" }}>{e}</span>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ marginBottom: "14px" }}>
           <label style={labelStyle}>TITLE</label>
           <input value={form.title} onChange={e => update("title", e.target.value)} style={inputStyle} placeholder="e.g. Lava Drip Loop" />
@@ -153,19 +259,24 @@ function RefCard({ r, onPress, onLongPress }) {
   const handlers = useLongPress(() => onLongPress(r), () => onPress(r), 500);
   return (
     <div {...handlers} className="card"
-      style={{ background: "#0c0c0c", border: "1px solid #161616", borderRadius: "10px", padding: "18px", cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-        <span style={{ fontSize: "28px" }}>{r.thumbnail}</span>
-        <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px" }}>{r.status.toUpperCase()}</span>
+      style={{ background: "#0c0c0c", border: "1px solid #161616", borderRadius: "10px", overflow: "hidden", cursor: "pointer", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
+      {r.image
+        ? <img src={r.image} alt="" style={{ width: "100%", height: "120px", objectFit: "cover", display: "block" }} />
+        : <div style={{ height: "80px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "36px", background: "#0a0a0a" }}>{r.thumbnail}</div>
+      }
+      <div style={{ padding: "14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, color: "#ddd", flex: 1, marginRight: "8px" }}>{r.title}</div>
+          <span style={{ fontSize: "8px", padding: "3px 6px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px", flexShrink: 0 }}>{r.status.toUpperCase()}</span>
+        </div>
+        <div style={{ fontSize: "10px", color: "#444", marginBottom: "8px" }}>{r.category} · {r.date}</div>
+        <div style={{ display: "flex", marginBottom: "8px" }}><Stars rating={r.rating} /></div>
+        {r.notes && <div style={{ fontSize: "11px", color: "#444", marginBottom: "8px", lineHeight: "1.5", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.notes}</div>}
+        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "6px" }}>
+          {(r.tags || []).slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
+        </div>
+        <div style={{ fontSize: "9px", color: "#1e1e1e", letterSpacing: "1px" }}>HOLD FOR OPTIONS</div>
       </div>
-      <div style={{ fontSize: "13px", fontWeight: 700, color: "#ddd", marginBottom: "4px" }}>{r.title}</div>
-      <div style={{ fontSize: "10px", color: "#444", marginBottom: "10px" }}>{r.category} · {r.date}</div>
-      <div style={{ display: "flex", marginBottom: "10px" }}><Stars rating={r.rating} /></div>
-      {r.notes && <div style={{ fontSize: "11px", color: "#444", marginBottom: "10px", lineHeight: "1.5", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.notes}</div>}
-      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-        {(r.tags || []).slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
-      </div>
-      <div style={{ marginTop: "10px", fontSize: "9px", color: "#222", letterSpacing: "1px" }}>HOLD TO EDIT</div>
     </div>
   );
 }
@@ -175,17 +286,17 @@ function RefRow({ r, i, total, onPress, onLongPress }) {
   const handlers = useLongPress(() => onLongPress(r), () => onPress(r), 500);
   return (
     <div {...handlers} className="ref-row"
-      style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 18px", borderBottom: i < total - 1 ? "1px solid #111" : "none", cursor: "pointer", background: "#0c0c0c", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
-      <span style={{ fontSize: "20px", flexShrink: 0 }}>{r.thumbnail}</span>
+      style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderBottom: i < total - 1 ? "1px solid #111" : "none", cursor: "pointer", background: "#0c0c0c", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
+      {r.image
+        ? <img src={r.image} alt="" style={{ width: 36, height: 36, borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
+        : <span style={{ fontSize: "20px", flexShrink: 0 }}>{r.thumbnail}</span>
+      }
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "12px", fontWeight: 700, color: "#ddd" }}>{r.title}</div>
         <div style={{ fontSize: "10px", color: "#444" }}>{r.category} · {r.date}</div>
       </div>
       <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}><Stars rating={r.rating} /></div>
-      <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px", flexShrink: 0 }}>{r.status.toUpperCase()}</span>
-      <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-        {(r.tags || []).slice(0, 2).map(t => <span key={t} className="tag">{t}</span>)}
-      </div>
+      <span style={{ fontSize: "8px", padding: "3px 7px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px", flexShrink: 0 }}>{r.status.toUpperCase()}</span>
     </div>
   );
 }
@@ -198,6 +309,7 @@ function App() {
   const [sortBy, setSortBy] = useState("date");
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [actionItem, setActionItem] = useState(null);
   const [view, setView] = useState("grid");
 
   useEffect(() => { saveRefs(refs); }, [refs]);
@@ -207,7 +319,7 @@ function App() {
     .filter(r => statusFilter === "All" || r.status === statusFilter)
     .filter(r => {
       const q = search.toLowerCase();
-      return !q || r.title.toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q)) || r.notes.toLowerCase().includes(q);
+      return !q || r.title.toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q)) || (r.notes || "").toLowerCase().includes(q);
     })
     .sort((a, b) => {
       if (sortBy === "rating") return b.rating - a.rating;
@@ -219,7 +331,10 @@ function App() {
     setRefs(r => item.id && r.find(x => x.id === item.id) ? r.map(x => x.id === item.id ? item : x) : [...r, item]);
     setModal(null); setSelected(null);
   };
-  const deleteRef = (id) => { setRefs(r => r.filter(x => x.id !== id)); setSelected(null); };
+  const deleteRef = (id) => {
+    setRefs(r => r.filter(x => x.id !== id));
+    setSelected(null); setActionItem(null);
+  };
 
   const stats = {
     total: refs.length,
@@ -260,7 +375,7 @@ function App() {
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: "120px", fontSize: "11px", padding: "7px 8px" }}>
           {["All","approved","review","rejected","idea"].map(s => <option key={s}>{s}</option>)}
         </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...inputStyle, width: "120px", fontSize: "11px", padding: "7px 8px" }}>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...inputStyle, width: "110px", fontSize: "11px", padding: "7px 8px" }}>
           <option value="date">DATE</option>
           <option value="rating">RATING</option>
           <option value="title">A–Z</option>
@@ -275,43 +390,58 @@ function App() {
       </div>
       {view === "grid" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px" }}>
-          {filtered.map(r => <RefCard key={r.id} r={r} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />)}
+          {filtered.map(r => (
+            <RefCard key={r.id} r={r} onPress={r => setSelected(r)} onLongPress={r => setActionItem(r)} />
+          ))}
           {filtered.length === 0 && <div style={{ color: "#333", fontSize: "12px", letterSpacing: "2px", padding: "40px 0" }}>NO REFS FOUND</div>}
         </div>
       )}
       {view === "list" && (
         <div style={{ border: "1px solid #161616", borderRadius: "10px", overflow: "hidden" }}>
-          {filtered.map((r, i) => <RefRow key={r.id} r={r} i={i} total={filtered.length} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />)}
+          {filtered.map((r, i) => (
+            <RefRow key={r.id} r={r} i={i} total={filtered.length} onPress={r => setSelected(r)} onLongPress={r => setActionItem(r)} />
+          ))}
           {filtered.length === 0 && <div style={{ color: "#333", fontSize: "12px", letterSpacing: "2px", padding: "40px 20px" }}>NO REFS FOUND</div>}
         </div>
       )}
-      {selected && !modal && (
+      {actionItem && !modal && (
+        <ActionSheet
+          item={actionItem}
+          onEdit={() => { setModal(actionItem); setActionItem(null); }}
+          onDelete={() => deleteRef(actionItem.id)}
+          onClose={() => setActionItem(null)}
+        />
+      )}
+      {selected && !modal && !actionItem && (
         <div onClick={e => e.target === e.currentTarget && setSelected(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-          <div style={{ background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "460px", color: "#eee", fontFamily: "'JetBrains Mono', monospace", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: "12px", width: "100%", maxWidth: "460px", color: "#eee", fontFamily: "'JetBrains Mono', monospace", maxHeight: "90vh", overflowY: "auto" }}>
             {(() => {
               const sc = STATUS_COLORS[selected.status] || STATUS_COLORS.idea;
               return <>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                  <span style={{ fontSize: "36px" }}>{selected.thumbnail}</span>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <button onClick={() => { setModal(selected); setSelected(null); }} style={{ ...btnSecondary, fontSize: "10px", padding: "6px 12px" }}>EDIT</button>
-                    <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#444", fontSize: "20px", cursor: "pointer" }}>✕</button>
+                {selected.image && <img src={selected.image} alt="" style={{ width: "100%", maxHeight: "200px", objectFit: "cover", borderRadius: "12px 12px 0 0", display: "block" }} />}
+                <div style={{ padding: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                    {!selected.image && <span style={{ fontSize: "36px" }}>{selected.thumbnail}</span>}
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", marginLeft: "auto" }}>
+                      <button onClick={() => { setModal(selected); setSelected(null); }} style={{ ...btnSecondary, fontSize: "10px", padding: "6px 12px" }}>EDIT</button>
+                      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#444", fontSize: "20px", cursor: "pointer" }}>✕</button>
+                    </div>
                   </div>
-                </div>
-                <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#444", marginBottom: "4px" }}>{selected.category.toUpperCase()} · {selected.date}</div>
-                <div style={{ fontSize: "18px", fontWeight: 700, color: "#eee", marginBottom: "10px" }}>{selected.title}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                  <div style={{ display: "flex" }}><Stars rating={selected.rating} /></div>
-                  <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px" }}>{selected.status.toUpperCase()}</span>
-                </div>
-                {selected.notes && <div style={{ fontSize: "12px", color: "#777", lineHeight: "1.7", marginBottom: "14px", padding: "12px", background: "#111", borderRadius: "6px", borderLeft: "2px solid #222" }}>{selected.notes}</div>}
-                {selected.url && <div style={{ fontSize: "11px", marginBottom: "14px" }}><a href={selected.url} target="_blank" rel="noreferrer" style={{ color: "#1aff7a", textDecoration: "none" }}>↗ VIEW REFERENCE</a></div>}
-                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "20px" }}>
-                  {(selected.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
-                </div>
-                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                  <button onClick={() => deleteRef(selected.id)} style={{ ...btnSecondary, color: "#ff4444", borderColor: "#2a1111", fontSize: "10px", padding: "7px 14px" }}>DELETE</button>
+                  <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#444", marginBottom: "4px" }}>{selected.category.toUpperCase()} · {selected.date}</div>
+                  <div style={{ fontSize: "18px", fontWeight: 700, color: "#eee", marginBottom: "10px" }}>{selected.title}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                    <div style={{ display: "flex" }}><Stars rating={selected.rating} /></div>
+                    <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px" }}>{selected.status.toUpperCase()}</span>
+                  </div>
+                  {selected.notes && <div style={{ fontSize: "12px", color: "#777", lineHeight: "1.7", marginBottom: "14px", padding: "12px", background: "#111", borderRadius: "6px", borderLeft: "2px solid #222" }}>{selected.notes}</div>}
+                  {selected.url && <div style={{ fontSize: "11px", marginBottom: "14px" }}><a href={selected.url} target="_blank" rel="noreferrer" style={{ color: "#1aff7a", textDecoration: "none" }}>↗ VIEW REFERENCE</a></div>}
+                  <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "20px" }}>
+                    {(selected.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <button onClick={() => deleteRef(selected.id)} style={{ ...btnSecondary, color: "#ff4444", borderColor: "#2a1111", fontSize: "10px", padding: "7px 14px" }}>DELETE</button>
+                  </div>
                 </div>
               </>;
             })()}
