@@ -1,11 +1,38 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Burak's VFX Library</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080808; font-family: 'JetBrains Mono', 'Courier New', monospace; }
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0e0e0e; }
+  ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+  .card:hover { border-color: #2a2a2a !important; transform: translateY(-1px); }
+  .tag { background: #111; border: 1px solid #1e1e1e; color: #555; border-radius: 4px; padding: 2px 7px; font-size: 10px; letter-spacing: 1px; }
+  .cat-btn { background: none; border: 1px solid #1a1a1a; color: #444; border-radius: 5px; padding: 5px 12px; font-size: 10px; letter-spacing: 1px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.15s; }
+  .cat-btn:hover, .cat-btn.active { background: #111; border-color: #333; color: #ccc; }
+  .ref-row:hover { background: #0d0d0d !important; }
+  input:focus, select:focus, textarea:focus { border-color: #333 !important; outline: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
-const CATEGORIES = ["All", "Fire", "Smoke", "Explosion", "Water", "Lightning", "Magic", "Dust", "Impact", "Ambient", "UI", "Other"];
+const CATEGORIES = ["All","Fire","Smoke","Explosion","Water","Lightning","Magic","Dust","Impact","Ambient","UI","Other"];
 
 const INITIAL_REFS = [
-  { id: 1, title: "Ember Burst Loop", category: "Fire", tags: ["loop", "stylized", "orange"], status: "approved", rating: 5, notes: "Great energy for boss hit reactions", url: "", date: "2026-03-10", thumbnail: "🔥" },
-  { id: 2, title: "Smoke Trail - Slow", category: "Smoke", tags: ["slow-mo", "realistic"], status: "review", rating: 3, notes: "Might need color grading for night scenes", url: "", date: "2026-03-22", thumbnail: "💨" },
-  { id: 3, title: "Shockwave Ring", category: "Explosion", tags: ["shockwave", "ground", "impact"], status: "approved", rating: 4, notes: "Perfect for ground slam moves", url: "", date: "2026-04-01", thumbnail: "💥" },
+  { id: 1, title: "Ember Burst Loop", category: "Fire", tags: ["loop","stylized","orange"], status: "approved", rating: 5, notes: "Great energy for boss hit reactions", url: "", date: "2026-03-10", thumbnail: "🔥" },
+  { id: 2, title: "Smoke Trail - Slow", category: "Smoke", tags: ["slow-mo","realistic"], status: "review", rating: 3, notes: "Might need color grading for night scenes", url: "", date: "2026-03-22", thumbnail: "💨" },
+  { id: 3, title: "Shockwave Ring", category: "Explosion", tags: ["shockwave","ground","impact"], status: "approved", rating: 4, notes: "Perfect for ground slam moves", url: "", date: "2026-04-01", thumbnail: "💥" },
 ];
 
 const STATUS_COLORS = {
@@ -17,59 +44,33 @@ const STATUS_COLORS = {
 
 const STORAGE_KEY = "vfx_refs_v2";
 
-async function loadRefs() {
-  try {
-    const result = await window.storage.get(STORAGE_KEY);
-    if (result?.value) return JSON.parse(result.value);
-  } catch {}
-  return null;
+function loadRefs() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
 }
-
-async function saveRefs(refs) {
-  try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(refs));
-  } catch (e) {
-    console.error("Storage save failed:", e);
-  }
+function saveRefs(refs) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(refs)); } catch {}
 }
 
 function useLongPress(onLongPress, onClick, delay = 500) {
   const timerRef = useRef(null);
   const firedRef = useRef(false);
-
   const start = useCallback((e) => {
     firedRef.current = false;
-    timerRef.current = setTimeout(() => {
-      firedRef.current = true;
-      onLongPress(e);
-    }, delay);
+    timerRef.current = setTimeout(() => { firedRef.current = true; onLongPress(e); }, delay);
   }, [onLongPress, delay]);
-
-  const cancel = useCallback(() => {
-    clearTimeout(timerRef.current);
-  }, []);
-
-  const end = useCallback((e) => {
-    clearTimeout(timerRef.current);
-    if (!firedRef.current) onClick(e);
-  }, [onClick]);
-
-  return {
-    onPointerDown: start,
-    onPointerUp: end,
-    onPointerLeave: cancel,
-    onPointerCancel: cancel,
-  };
+  const cancel = useCallback(() => { clearTimeout(timerRef.current); }, []);
+  const end = useCallback((e) => { clearTimeout(timerRef.current); if (!firedRef.current) onClick(e); }, [onClick]);
+  return { onPointerDown: start, onPointerUp: end, onPointerLeave: cancel, onPointerCancel: cancel };
 }
 
-const STAR = (n, rating, setRating) =>
+const Stars = ({ rating, setRating }) =>
   Array.from({ length: 5 }).map((_, i) => (
     <span key={i} onClick={() => setRating && setRating(i + 1)}
       style={{ cursor: setRating ? "pointer" : "default", color: i < rating ? "#ffcc00" : "#2a2a2a", fontSize: "14px", letterSpacing: "1px" }}>★</span>
   ));
 
 const labelStyle = { fontSize: "9px", letterSpacing: "2px", color: "#555", textTransform: "uppercase", display: "block", marginBottom: "4px" };
-const inputStyle = { width: "100%", background: "#141414", border: "1px solid #222", borderRadius: "6px", color: "#ddd", padding: "8px 10px", fontSize: "13px", fontFamily: "'JetBrains Mono', monospace", boxSizing: "border-box", outline: "none" };
+const inputStyle = { width: "100%", background: "#141414", border: "1px solid #222", borderRadius: "6px", color: "#ddd", padding: "8px 10px", fontSize: "13px", fontFamily: "'JetBrains Mono', monospace", boxSizing: "border-box" };
 const btnPrimary = { background: "#1aff7a", color: "#000", border: "none", borderRadius: "6px", padding: "9px 20px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", fontWeight: "700", letterSpacing: "2px", cursor: "pointer" };
 const btnSecondary = { background: "transparent", color: "#555", border: "1px solid #222", borderRadius: "6px", padding: "9px 20px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "2px", cursor: "pointer" };
 
@@ -83,14 +84,13 @@ function Modal({ item, onClose, onSave }) {
   const EMOJIS = ["🔥","💨","💥","💧","⚡","✨","🌫️","🌪️","🎇","🎆","⭐","🌟"];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: "#0e0e0e", border: "1px solid #222", borderRadius: "12px", padding: "28px", width: "480px", maxWidth: "95vw", maxHeight: "90vh", overflowY: "auto", color: "#eee", fontFamily: "'JetBrains Mono', monospace" }}>
+    <div onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+      <div style={{ background: "#0e0e0e", border: "1px solid #222", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto", color: "#eee", fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <span style={{ color: "#888", fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase" }}>{item?.id ? "EDIT REFERENCE" : "NEW REFERENCE"}</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", fontSize: "18px", cursor: "pointer" }}>✕</button>
+          <span style={{ color: "#888", fontSize: "11px", letterSpacing: "3px" }}>{item?.id ? "EDIT REFERENCE" : "NEW REFERENCE"}</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", fontSize: "20px", cursor: "pointer" }}>✕</button>
         </div>
-
         <div style={{ marginBottom: "16px" }}>
           <label style={labelStyle}>THUMBNAIL ICON</label>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "6px" }}>
@@ -100,12 +100,10 @@ function Modal({ item, onClose, onSave }) {
             ))}
           </div>
         </div>
-
         <div style={{ marginBottom: "14px" }}>
           <label style={labelStyle}>TITLE</label>
           <input value={form.title} onChange={e => update("title", e.target.value)} style={inputStyle} placeholder="e.g. Lava Drip Loop" />
         </div>
-
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
           <div>
             <label style={labelStyle}>CATEGORY</label>
@@ -120,29 +118,24 @@ function Modal({ item, onClose, onSave }) {
             </select>
           </div>
         </div>
-
         <div style={{ marginBottom: "14px" }}>
           <label style={labelStyle}>RATING</label>
           <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
-            {STAR(5, form.rating, v => update("rating", v))}
+            <Stars rating={form.rating} setRating={v => update("rating", v)} />
           </div>
         </div>
-
         <div style={{ marginBottom: "14px" }}>
           <label style={labelStyle}>TAGS (comma separated)</label>
           <input value={form.tags} onChange={e => update("tags", e.target.value)} style={inputStyle} placeholder="loop, stylized, fire" />
         </div>
-
         <div style={{ marginBottom: "14px" }}>
           <label style={labelStyle}>REFERENCE URL</label>
           <input value={form.url} onChange={e => update("url", e.target.value)} style={inputStyle} placeholder="https://..." />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label style={labelStyle}>NOTES</label>
           <textarea value={form.notes} onChange={e => update("notes", e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Art direction notes, context, usage..." />
         </div>
-
         <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
           <button onClick={onClose} style={btnSecondary}>CANCEL</button>
           <button onClick={() => {
@@ -160,14 +153,14 @@ function RefCard({ r, onPress, onLongPress }) {
   const handlers = useLongPress(() => onLongPress(r), () => onPress(r), 500);
   return (
     <div {...handlers} className="card"
-      style={{ background: "#0c0c0c", border: "1px solid #161616", borderRadius: "10px", padding: "18px", cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation", position: "relative" }}>
+      style={{ background: "#0c0c0c", border: "1px solid #161616", borderRadius: "10px", padding: "18px", cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
         <span style={{ fontSize: "28px" }}>{r.thumbnail}</span>
         <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px" }}>{r.status.toUpperCase()}</span>
       </div>
       <div style={{ fontSize: "13px", fontWeight: 700, color: "#ddd", marginBottom: "4px" }}>{r.title}</div>
       <div style={{ fontSize: "10px", color: "#444", marginBottom: "10px" }}>{r.category} · {r.date}</div>
-      <div style={{ display: "flex", marginBottom: "10px" }}>{STAR(5, r.rating)}</div>
+      <div style={{ display: "flex", marginBottom: "10px" }}><Stars rating={r.rating} /></div>
       {r.notes && <div style={{ fontSize: "11px", color: "#444", marginBottom: "10px", lineHeight: "1.5", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.notes}</div>}
       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
         {(r.tags || []).slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
@@ -188,7 +181,7 @@ function RefRow({ r, i, total, onPress, onLongPress }) {
         <div style={{ fontSize: "12px", fontWeight: 700, color: "#ddd" }}>{r.title}</div>
         <div style={{ fontSize: "10px", color: "#444" }}>{r.category} · {r.date}</div>
       </div>
-      <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>{STAR(5, r.rating)}</div>
+      <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}><Stars rating={r.rating} /></div>
       <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px", flexShrink: 0 }}>{r.status.toUpperCase()}</span>
       <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
         {(r.tags || []).slice(0, 2).map(t => <span key={t} className="tag">{t}</span>)}
@@ -197,9 +190,8 @@ function RefRow({ r, i, total, onPress, onLongPress }) {
   );
 }
 
-export default function VFXTracker() {
-  const [refs, setRefs] = useState(INITIAL_REFS);
-  const [loaded, setLoaded] = useState(false);
+function App() {
+  const [refs, setRefs] = useState(() => loadRefs() || INITIAL_REFS);
   const [category, setCategory] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -208,16 +200,7 @@ export default function VFXTracker() {
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("grid");
 
-  useEffect(() => {
-    loadRefs().then(data => {
-      if (data && Array.isArray(data) && data.length > 0) setRefs(data);
-      setLoaded(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (loaded) saveRefs(refs);
-  }, [refs, loaded]);
+  useEffect(() => { saveRefs(refs); }, [refs]);
 
   const filtered = refs
     .filter(r => category === "All" || r.category === category)
@@ -233,18 +216,10 @@ export default function VFXTracker() {
     });
 
   const saveRef = (item) => {
-    setRefs(r => item.id && r.find(x => x.id === item.id)
-      ? r.map(x => x.id === item.id ? item : x)
-      : [...r, item]
-    );
-    setModal(null);
-    setSelected(null);
+    setRefs(r => item.id && r.find(x => x.id === item.id) ? r.map(x => x.id === item.id ? item : x) : [...r, item]);
+    setModal(null); setSelected(null);
   };
-
-  const deleteRef = (id) => {
-    setRefs(r => r.filter(x => x.id !== id));
-    setSelected(null);
-  };
+  const deleteRef = (id) => { setRefs(r => r.filter(x => x.id !== id)); setSelected(null); };
 
   const stats = {
     total: refs.length,
@@ -254,91 +229,66 @@ export default function VFXTracker() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#080808", color: "#ccc", fontFamily: "'JetBrains Mono', 'Courier New', monospace", padding: "24px 20px" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #0e0e0e; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
-        input:focus, select:focus, textarea:focus { border-color: #333 !important; }
-        .card:hover { border-color: #2a2a2a !important; transform: translateY(-1px); }
-        .tag { background: #111; border: 1px solid #1e1e1e; color: #555; border-radius: 4px; padding: 2px 7px; font-size: 10px; letter-spacing: 1px; }
-        .cat-btn { background: none; border: 1px solid #1a1a1a; color: #444; border-radius: 5px; padding: 5px 12px; font-size: 10px; letter-spacing: 1px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.15s; }
-        .cat-btn:hover, .cat-btn.active { background: #111; border-color: #333; color: #ccc; }
-        .ref-row:hover { background: #0d0d0d !important; }
-      `}</style>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
+    <div style={{ minHeight: "100vh", background: "#080808", color: "#ccc", fontFamily: "'JetBrains Mono', 'Courier New', monospace", padding: "20px 16px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#333", marginBottom: "4px" }}>GAME VFX REFERENCE TRACKER</div>
-          <div style={{ fontSize: "22px", fontWeight: 700, color: "#eee", letterSpacing: "-0.5px" }}>
-            Burak's VFX Library
-            {!loaded && <span style={{ fontSize: "11px", color: "#333", letterSpacing: "2px", marginLeft: "12px", fontWeight: 400 }}>LOADING...</span>}
-          </div>
+          <div style={{ fontSize: "20px", fontWeight: 700, color: "#eee" }}>Burak's VFX Library</div>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <button onClick={() => setView(v => v === "grid" ? "list" : "grid")} style={{ ...btnSecondary, padding: "7px 14px", fontSize: "10px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => setView(v => v === "grid" ? "list" : "grid")} style={{ ...btnSecondary, padding: "7px 12px", fontSize: "10px" }}>
             {view === "grid" ? "⊟ LIST" : "⊞ GRID"}
           </button>
-          <button onClick={() => setModal("new")} style={{ ...btnPrimary, fontSize: "10px", padding: "8px 16px" }}>+ NEW REF</button>
+          <button onClick={() => setModal("new")} style={{ ...btnPrimary, fontSize: "10px", padding: "8px 14px" }}>+ NEW</button>
         </div>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginBottom: "20px" }}>
         {[
-          { label: "TOTAL REFS", value: stats.total },
-          { label: "APPROVED", value: stats.approved, color: "#1aff7a" },
-          { label: "IN REVIEW", value: stats.review, color: "#ffaa00" },
-          { label: "AVG RATING", value: stats.avgRating + " ★", color: "#ffcc00" },
+          { label: "TOTAL", value: stats.total },
+          { label: "OK", value: stats.approved, color: "#1aff7a" },
+          { label: "REVIEW", value: stats.review, color: "#ffaa00" },
+          { label: "AVG ★", value: stats.avgRating, color: "#ffcc00" },
         ].map(s => (
-          <div key={s.label} style={{ background: "#0d0d0d", border: "1px solid #161616", borderRadius: "8px", padding: "14px 16px" }}>
-            <div style={{ fontSize: "8px", letterSpacing: "2px", color: "#333", marginBottom: "6px" }}>{s.label}</div>
-            <div style={{ fontSize: "20px", fontWeight: 700, color: s.color || "#555" }}>{s.value}</div>
+          <div key={s.label} style={{ background: "#0d0d0d", border: "1px solid #161616", borderRadius: "8px", padding: "12px 10px" }}>
+            <div style={{ fontSize: "8px", letterSpacing: "1px", color: "#333", marginBottom: "4px" }}>{s.label}</div>
+            <div style={{ fontSize: "18px", fontWeight: 700, color: s.color || "#555" }}>{s.value}</div>
           </div>
         ))}
       </div>
-
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", alignItems: "center" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="SEARCH REFS..." style={{ ...inputStyle, width: "200px", fontSize: "11px", padding: "7px 12px" }} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: "130px", fontSize: "11px", padding: "7px 10px" }}>
-          {["All", "approved", "review", "rejected", "idea"].map(s => <option key={s}>{s}</option>)}
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="SEARCH..." style={{ ...inputStyle, flex: 1, minWidth: "120px", fontSize: "11px", padding: "7px 10px" }} />
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: "120px", fontSize: "11px", padding: "7px 8px" }}>
+          {["All","approved","review","rejected","idea"].map(s => <option key={s}>{s}</option>)}
         </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...inputStyle, width: "130px", fontSize: "11px", padding: "7px 10px" }}>
-          <option value="date">SORT: DATE</option>
-          <option value="rating">SORT: RATING</option>
-          <option value="title">SORT: A–Z</option>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...inputStyle, width: "120px", fontSize: "11px", padding: "7px 8px" }}>
+          <option value="date">DATE</option>
+          <option value="rating">RATING</option>
+          <option value="title">A–Z</option>
         </select>
       </div>
-
-      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "22px" }}>
+      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "20px" }}>
         {CATEGORIES.map(c => (
           <button key={c} className={`cat-btn${category === c ? " active" : ""}`} onClick={() => setCategory(c)}>
             {c.toUpperCase()}
           </button>
         ))}
       </div>
-
       {view === "grid" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
-          {filtered.map(r => (
-            <RefCard key={r.id} r={r} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px" }}>
+          {filtered.map(r => <RefCard key={r.id} r={r} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />)}
           {filtered.length === 0 && <div style={{ color: "#333", fontSize: "12px", letterSpacing: "2px", padding: "40px 0" }}>NO REFS FOUND</div>}
         </div>
       )}
-
       {view === "list" && (
         <div style={{ border: "1px solid #161616", borderRadius: "10px", overflow: "hidden" }}>
-          {filtered.map((r, i) => (
-            <RefRow key={r.id} r={r} i={i} total={filtered.length} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />
-          ))}
+          {filtered.map((r, i) => <RefRow key={r.id} r={r} i={i} total={filtered.length} onPress={r => setSelected(r)} onLongPress={r => setModal(r)} />)}
           {filtered.length === 0 && <div style={{ color: "#333", fontSize: "12px", letterSpacing: "2px", padding: "40px 20px" }}>NO REFS FOUND</div>}
         </div>
       )}
-
       {selected && !modal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}
-          onClick={e => e.target === e.currentTarget && setSelected(null)}>
-          <div style={{ background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: "12px", padding: "28px", width: "460px", maxWidth: "95vw", color: "#eee", fontFamily: "'JetBrains Mono', monospace" }}>
+        <div onClick={e => e.target === e.currentTarget && setSelected(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: "12px", padding: "24px", width: "100%", maxWidth: "460px", color: "#eee", fontFamily: "'JetBrains Mono', monospace", maxHeight: "90vh", overflowY: "auto" }}>
             {(() => {
               const sc = STATUS_COLORS[selected.status] || STATUS_COLORS.idea;
               return <>
@@ -346,13 +296,13 @@ export default function VFXTracker() {
                   <span style={{ fontSize: "36px" }}>{selected.thumbnail}</span>
                   <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <button onClick={() => { setModal(selected); setSelected(null); }} style={{ ...btnSecondary, fontSize: "10px", padding: "6px 12px" }}>EDIT</button>
-                    <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#444", fontSize: "18px", cursor: "pointer" }}>✕</button>
+                    <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#444", fontSize: "20px", cursor: "pointer" }}>✕</button>
                   </div>
                 </div>
                 <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#444", marginBottom: "4px" }}>{selected.category.toUpperCase()} · {selected.date}</div>
                 <div style={{ fontSize: "18px", fontWeight: 700, color: "#eee", marginBottom: "10px" }}>{selected.title}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                  <div style={{ display: "flex" }}>{STAR(5, selected.rating)}</div>
+                  <div style={{ display: "flex" }}><Stars rating={selected.rating} /></div>
                   <span style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "4px", background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, letterSpacing: "1px" }}>{selected.status.toUpperCase()}</span>
                 </div>
                 {selected.notes && <div style={{ fontSize: "12px", color: "#777", lineHeight: "1.7", marginBottom: "14px", padding: "12px", background: "#111", borderRadius: "6px", borderLeft: "2px solid #222" }}>{selected.notes}</div>}
@@ -368,14 +318,14 @@ export default function VFXTracker() {
           </div>
         </div>
       )}
-
       {(modal === "new" || (modal && modal.id)) && (
-        <Modal
-          item={modal === "new" ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={saveRef}
-        />
+        <Modal item={modal === "new" ? null : modal} onClose={() => setModal(null)} onSave={saveRef} />
       )}
     </div>
   );
 }
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
