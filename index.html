@@ -157,11 +157,7 @@ function Modal({ item, onClose, onSave }) {
 
 function RefCard({ r, onPress, onLongPress }) {
   const sc = STATUS_COLORS[r.status] || STATUS_COLORS.idea;
-  const handlers = useLongPress(
-    () => onLongPress(r),
-    () => onPress(r),
-    500
-  );
+  const handlers = useLongPress(() => onLongPress(r), () => onPress(r), 500);
   return (
     <div {...handlers} className="card"
       style={{ background: "#0c0c0c", border: "1px solid #161616", borderRadius: "10px", padding: "18px", cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation", position: "relative" }}>
@@ -183,11 +179,7 @@ function RefCard({ r, onPress, onLongPress }) {
 
 function RefRow({ r, i, total, onPress, onLongPress }) {
   const sc = STATUS_COLORS[r.status] || STATUS_COLORS.idea;
-  const handlers = useLongPress(
-    () => onLongPress(r),
-    () => onPress(r),
-    500
-  );
+  const handlers = useLongPress(() => onLongPress(r), () => onPress(r), 500);
   return (
     <div {...handlers} className="ref-row"
       style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 18px", borderBottom: i < total - 1 ? "1px solid #111" : "none", cursor: "pointer", background: "#0c0c0c", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}>
@@ -275,7 +267,6 @@ export default function VFXTracker() {
         .ref-row:hover { background: #0d0d0d !important; }
       `}</style>
 
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#333", marginBottom: "4px" }}>GAME VFX REFERENCE TRACKER</div>
@@ -292,7 +283,6 @@ export default function VFXTracker() {
         </div>
       </div>
 
-      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
         {[
           { label: "TOTAL REFS", value: stats.total },
@@ -307,7 +297,6 @@ export default function VFXTracker() {
         ))}
       </div>
 
-      {/* Filters */}
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", alignItems: "center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="SEARCH REFS..." style={{ ...inputStyle, width: "200px", fontSize: "11px", padding: "7px 12px" }} />
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: "130px", fontSize: "11px", padding: "7px 10px" }}>
@@ -320,7 +309,6 @@ export default function VFXTracker() {
         </select>
       </div>
 
-      {/* Category Pills */}
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "22px" }}>
         {CATEGORIES.map(c => (
           <button key={c} className={`cat-btn${category === c ? " active" : ""}`} onClick={() => setCategory(c)}>
@@ -329,7 +317,6 @@ export default function VFXTracker() {
         ))}
       </div>
 
-      {/* Grid */}
       {view === "grid" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
           {filtered.map(r => (
@@ -339,7 +326,6 @@ export default function VFXTracker() {
         </div>
       )}
 
-      {/* List */}
       {view === "list" && (
         <div style={{ border: "1px solid #161616", borderRadius: "10px", overflow: "hidden" }}>
           {filtered.map((r, i) => (
@@ -349,7 +335,6 @@ export default function VFXTracker() {
         </div>
       )}
 
-      {/* Detail Modal */}
       {selected && !modal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}
           onClick={e => e.target === e.currentTarget && setSelected(null)}>
@@ -384,7 +369,6 @@ export default function VFXTracker() {
         </div>
       )}
 
-      {/* New / Edit Modal */}
       {(modal === "new" || (modal && modal.id)) && (
         <Modal
           item={modal === "new" ? null : modal}
